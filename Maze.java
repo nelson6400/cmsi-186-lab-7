@@ -28,10 +28,52 @@ public class Maze {
      * of the factory methods fromString, fromFile, or fromScanner.
      */
     private Maze(String[] lines) {
-        // TODO: Fill this in. There is a lot to check for! The maze must be
-        // perfectly rectanglar, not contain any illegal characters, have exactly
-        // one rat (not less, not more), and have exactly one cheese (not less,
-        // not more).
+        var height = lines.length;
+        if (height == 0) {
+            throw new IllegalArgumentException("Maze has no rows");
+        }
+        var width = lines[0].length();
+        cells = new Cell[height][width];
+
+        for (var row = 0; row < height; row++) {
+            var line = lines[row];
+            if (line.length() != width) {
+                throw new IllegalArgumentException("Non-rectangular maze");
+            }
+            for (int column = 0; column < width; column++) {
+                switch (line.charAt(column)) {
+                    case 'r':
+                        if (initialRatLocation != null) {
+                            throw new IllegalArgumentException("Maze can only have one rat");
+                        }
+                        initialRatLocation = new Location(row, column);
+                        cells[row][column] = Cell.RAT;
+                        break;
+                    case 'c':
+                        if (initialCheeseLocation != null) {
+                            throw new IllegalArgumentException("Maze can only have one cheese");
+                        }
+                        initialCheeseLocation = new Location(row, column);
+                        cells[row][column] = Cell.CHEESE;
+                        break;
+                    case 'w':
+                        cells[row][column] = Cell.WALL;
+                        break;
+                    case 'o':
+                        cells[row][column] = Cell.OPEN;
+                        break;
+                    default:
+                        System.out.println(line.charAt(column));
+                        throw new IllegalArgumentException("Illegal objects in maze description");
+                }
+            }
+        }
+        if (initialCheeseLocation == null) {
+            throw new IllegalArgumentException("Maze has no cheese");
+        }
+        if (initialRatLocation == null) {
+            throw new IllegalArgumentException("Maze has no rat");
+        }
     }
 
     public static Maze fromString(final String description) {
@@ -43,56 +85,48 @@ public class Maze {
     }
 
     public static Maze fromScanner(final Scanner scanner) {
-        // TODO: Fill this in. You will want to read line-by-line from the scanner
-        // storing each line in an array of strings, then turn the list into
-        // an array and pass that to the Maze constructor. Return the newly
-        // constructed maze from this method.
+        final var lines = new ArrayList<String>();
+        while (scanner.hasNextLine()) {
+            lines.add(scanner.nextLine());
+        }
+        return new Maze(lines.toArray(new String[0]));
     }
 
-    /**
-     * A nice representation of a Location, so we don't have to litter our code
-     * with separate row and column variables! A location object bundles these
-     * two values together. It also includes a whole bunch of nice little methods
-     * so that our code reads nicely.
-     */
     public class Location {
         private final int row;
         private final int column;
 
         Location(final int row, final int column) {
-            // TODO: Fill this in, it's pretty easy.
+            this.row = row;
+            this.column = column;
         }
 
         boolean isInMaze() {
-            // TODO: Fill this in. Return whether the row and column is a legal
-            // position in this maze.
+            return row >= 0 && row < getHeight() && column >= 0 && column < getWidth();
         }
 
         boolean canBeMovedTo() {
-            // TODO: Fill this in. You can move to a space only if it is inside the
-            // maze and the cell is open or contains the cheese.
+            return isInMaze() && (contents().equals(Cell.OPEN) || contents().equals(Cell.CHEESE));
         }
 
         boolean hasCheese() {
-            // TODO: Fill this in. Returns whether the cell has the cheese. You can
-            // use the contents() method to help you here.
+            return isInMaze() && contents().equals(Cell.CHEESE);
         }
 
         Location above() {
-            // TODO: Fill this in. It should return a new location whose coordinates
-            // are (1) the row above this location's row, and (2) the same column.
+            return new Location(row - 1, column);
         }
 
         Location below() {
-            // TODO: Fill this in. Return the location directly below this one.
+            return new Location(row + 1, column);
         }
 
         Location toTheLeft() {
-            // TODO: Fill this in. Return the location directly to the left of this one.
+            return new Location(row, column - 1);
         }
 
         Location toTheRight() {
-            // TODO: Fill this in. Return the location directly to the right of this one.
+            return new Location(row, column + 1);
         }
 
         void place(Cell cell) {
@@ -104,21 +138,19 @@ public class Maze {
         }
 
         boolean isAt(final Location other) {
-            // TODO: Fill this in. Returns whether this location and the other location have
-            // the same row and column values.
+            return row == other.row && column == other.column;
         }
     }
 
-    /**
-     * A simple cell value. A cell can be open (meaning a rat has never visited it),
-     * a wall, part of the rat's current path, or "tried" (meaning the rat found it
-     * to be part of a dead end.
-     */
     public static enum Cell {
         OPEN(' '), WALL('\u2588'), TRIED('x'), PATH('.'), RAT('r'), CHEESE('c');
-
-        // This needs a constructor and a toString method. You might need to do some
-        // research on Java enums.
+        private char display;
+        private Cell(char display) {
+            this.display = display;
+        }
+        public String toString() {
+            return Character.toString(display);
+        }
     }
 
     public interface MazeListener {
@@ -126,25 +158,21 @@ public class Maze {
     }
 
     public int getWidth() {
-        // TODO: Fill this in. The information comes from the cells array.
-    }
+        return cells[0].length;
+        }
 
     public int getHeight() {
-        // TODO: Fill this in
+        return cells.length;
     }
 
     public Location getInitialRatPosition() {
-        // TODO: Fill this in. It is a typical getter, since you already have a field
-        // for the initial rat position.
+        return initialRatLocation;
     }
 
     public Location getInitialCheesePosition() {
-        // TODO: Fill this in
+        return initialCheeseLocation;
     }
 
-    /**
-     * Returns a textual description of the maze, separating each row with a newline.
-     */
     public String toString() {
         return Stream.of(cells)
             .map(row -> Stream.of(row).map(Cell::toString).collect(joining()))
